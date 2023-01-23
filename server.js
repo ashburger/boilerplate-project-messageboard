@@ -10,12 +10,27 @@ const runner            = require('./test-runner');
 
 const app = express();
 
+const mongoose = require('mongoose');
+
+var helmet = require('helmet');
+
 app.use('/public', express.static(process.cwd() + '/public'));
 
 app.use(cors({origin: '*'})); //For FCC testing purposes only
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+
+app.use(helmet({
+  frameguard: {         // configure
+    action: 'sameorigin'
+  },
+  referrerPolicy:{
+    policy:'same-origin'
+  },
+  dnsPrefetchControl: true,
+}))
 
 //Sample front-end
 app.route('/b/:board/')
@@ -49,9 +64,13 @@ app.use(function(req, res, next) {
 //Start our server and tests!
 const listener = app.listen(process.env.PORT || 3000, function () {
   console.log('Your app is listening on port ' + listener.address().port);
+  
   if(process.env.NODE_ENV==='test') {
-    console.log('Running Tests...');
-    setTimeout(function () {
+    mongoose.connect(process.env.TESTDB)
+    .then(()=>{
+      console.log('Connected to database');
+      console.log('Running Tests...');
+      setTimeout(function () {
       try {
         runner.run();
       } catch(e) {
@@ -59,6 +78,20 @@ const listener = app.listen(process.env.PORT || 3000, function () {
         console.error(e);
       }
     }, 1500);
+    })
+    .catch((err)=>{
+      console.log('Connection failed');
+      console.log(err)
+    });
+  }else{
+    mongoose.connect(process.env.DB)
+    .then(()=>{
+      console.log('Connected to database');
+    })
+    .catch((err)=>{
+      console.log('Connection failed');
+      console.log(err)
+    });
   }
 });
 
